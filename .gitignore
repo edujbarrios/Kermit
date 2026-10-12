@@ -1,0 +1,8 @@
+# Generated reports, user state, and local cache
+reports/
+snapshots/
+.kermit/
+*.log
+*.tmp
+.DS_Store
+.vscode/
