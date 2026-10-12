@@ -113,7 +113,15 @@ function Get-KermitCleanupPlan {
                 CandidateCount = $files.Count
                 EstimatedMiB = [math]::Round($bytes / 1MB, 2)
                 MinimumAgeDays = $MinimumAgeDays
-                Warning = 'Deletion is permanent. In-use, recent, nested and linked items are skipped.'
+                Candidates = @($files | ForEach-Object {
+                    [pscustomobject]@{
+                        Path = $_.FullName
+                        Length = [long]$_.Length
+                        CreationTicks = $_.CreationTimeUtc.Ticks
+                        ModifiedTicks = $_.LastWriteTimeUtc.Ticks
+                    }
+                })
+                Warning = 'Deletion is permanent. Only the files in this preview can be removed; new, changed, in-use, nested or linked files are skipped.'
             }
         }
         'App' {
@@ -173,19 +181,37 @@ function Invoke-KermitCleanup {
 
     switch ([string]$Plan.Target) {
         'Temp' {
-            # Recompute eligibility immediately before deletion; never trust paths from a saved plan.
+            # Apply only exact previewed paths; recheck scope, file identity and age.
             $age = [int]$Plan.MinimumAgeDays
-            $files = @(Get-KermitUserTempFiles -MinimumAgeDays $age)
+            if ($age -lt 7 -or $age -gt 365) { throw 'Invalid cleanup age.' }
+            $planned = @($Plan.Candidates)
+            $liveCandidates = @(Get-KermitUserTempFiles -MinimumAgeDays $age)
+            $allowed = @{}
+            foreach ($file in $liveCandidates) { $allowed[$file.FullName] = $true }
+
             $deleted = 0
             $skipped = 0
             $bytes = [long]0
-            foreach ($file in $files) {
+            foreach ($candidate in $planned) {
                 try {
-                    $live = Get-Item -LiteralPath $file.FullName -Force -ErrorAction Stop
+                    $path = [string]$candidate.Path
+                    if (-not $allowed.ContainsKey($path)) { $skipped++; continue }
+                    $live = Get-Item -LiteralPath $path -Force -ErrorAction Stop
                     if ($live.PSIsContainer -or
                         (([int]($live.Attributes -band [IO.FileAttributes]::ReparsePoint)) -ne 0) -or
+                        $live.Length -ne [long]$candidate.Length -or
+                        $live.CreationTimeUtc.Ticks -ne [long]$candidate.CreationTicks -or
+                        $live.LastWriteTimeUtc.Ticks -ne [long]$candidate.ModifiedTicks -or
                         $live.LastWriteTime -ge (Get-Date).AddDays(-$age) -or
                         $live.CreationTime -ge (Get-Date).AddDays(-$age)) {
+                        $skipped++
+                        continue
+                    }
+                    $tempPath = [IO.Path]::GetFullPath((Join-Path $env:LOCALAPPDATA 'Temp'))
+                    $tempDir = Get-Item -LiteralPath $tempPath -Force -ErrorAction Stop
+                    if (([int]($tempDir.Attributes -band [IO.FileAttributes]::ReparsePoint)) -ne 0 -or
+                        -not [string]::Equals([IO.Path]::GetFullPath([IO.Path]::GetDirectoryName($live.FullName)),
+                            $tempPath, [StringComparison]::OrdinalIgnoreCase)) {
                         $skipped++
                         continue
                     }
