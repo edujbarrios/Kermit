@@ -46,6 +46,18 @@ jobs:
           }
           if ($report.Report.DeepCheck.Requested) { throw 'Deep CUDA probe must be opt-in.' }
 
+      - name: Test benchmark snapshots and comparison
+        shell: pwsh
+        run: |
+          ./tests/Benchmark.Tests.ps1
+          $destination = Join-Path $env:RUNNER_TEMP 'kermit-benchmark-fixture'
+          $before = (& ./Benchmark.ps1 -Action Capture -Label Before -Directory $destination -Json) | ConvertFrom-Json
+          $after = (& ./Benchmark.ps1 -Action Capture -Label After -Directory $destination -Json) | ConvertFrom-Json
+          if ($before.Snapshot.Schema -ne 'kermit.benchmark.v1') { throw 'Capture failed.' }
+          $comparison = (& ./Benchmark.ps1 -Action Compare -BeforePath $before.Path -AfterPath $after.Path -Json) | ConvertFrom-Json
+          if ($comparison.Result.Schema -ne 'kermit.benchmark-comparison.v1') { throw 'Compare failed.' }
+          if ($comparison.Result.Metrics.Count -lt 4) { throw 'Missing comparison metrics.' }
+
       - name: Exercise cleanup read-only CLI
         shell: pwsh
         run: |
@@ -94,6 +106,10 @@ jobs:
           .\tests\Smoke.Tests.ps1
           .\tests\Cleanup.Tests.ps1
           .\tests\AIDoctor.Tests.ps1
+          .\tests\Benchmark.Tests.ps1
+          $path = Join-Path $env:RUNNER_TEMP 'kermit-benchmark-ps51'
+          $report = (& .\Benchmark.ps1 -Action Capture -Label Before -Directory $path -Json) | ConvertFrom-Json
+          if ($report.Snapshot.Schema -ne 'kermit.benchmark.v1') { throw 'PowerShell 5.1 benchmark failed.' }
           $doctor = (& .\AI-Doctor.ps1 -Json) | ConvertFrom-Json
           if (-not $doctor.Report.ReadOnly) { throw 'AI Doctor CLI failed in PowerShell 5.1.' }
           $scan = (& .\Kermit.ps1 -Action Scan -Json) | ConvertFrom-Json
