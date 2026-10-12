@@ -71,6 +71,7 @@ $xaml = @'
                        Margin="0,8,0,16"/>
             <WrapPanel>
               <Button x:Name="ScanButton" Content="Scan PC"/>
+              <Button x:Name="AIDoctorButton" Content="AI Doctor" Background="#2563EB"/>
               <Button x:Name="RefreshCleanupButton" Content="Find cleanup candidates"
                       Background="#2563EB"/>
             </WrapPanel>
@@ -162,7 +163,7 @@ try { $window = [Windows.Markup.XamlReader]::Load($xmlReader) }
 finally { $xmlReader.Dispose(); $reader.Dispose() }
 
 $controls = @{}
-$names = @('ScanButton','RefreshCleanupButton','RefreshCleanupTabButton','ProfileCombo','PreviewProfileButton',
+$names = @('ScanButton','AIDoctorButton','RefreshCleanupButton','RefreshCleanupTabButton','ProfileCombo','PreviewProfileButton',
            'ApplyProfileButton','RestoreProfileButton','AgeCombo','PreviewTempButton',
            'ApplyTempButton','AppCombo','PreviewAppButton','ApplyAppButton',
            'ProcessCombo','PreviewProcessButton','ApplyProcessButton','OutputBox','StatusText')
@@ -174,6 +175,7 @@ if ($ValidateXaml) { Write-Output 'Kermit WPF XAML validated.'; return }
 
 Import-Module (Join-Path $PSScriptRoot 'src/Kermit.Core.psm1') -Force
 Import-Module (Join-Path $PSScriptRoot 'src/Kermit.Cleanup.psm1') -Force
+Import-Module (Join-Path $PSScriptRoot 'src/Kermit.AIDoctor.psm1') -Force
 
 $script:ProfilePlan = $null
 $script:TempPlan = $null
@@ -239,6 +241,12 @@ $controls.ScanButton.Add_Click({
             Inventory = $inventory
             AIRecommendations = @(Get-KermitGuidance -Inventory $inventory -Profile 'AI-Training')
         }) -Status 'Read-only system scan complete'
+    } catch { Show-Error $_.Exception.Message }
+})
+$controls.AIDoctorButton.Add_Click({
+    try {
+        $report = Get-KermitAIReport
+        Show-Result -Value $report -Status 'AI Doctor completed (read-only)'
     } catch { Show-Error $_.Exception.Message }
 })
 $controls.RefreshCleanupButton.Add_Click({
@@ -365,6 +373,7 @@ if ($SelfTest) {
     if ($null -eq $script:ProfilePlan) { throw 'Power profile preview GUI event failed.' }
     $controls.PreviewTempButton.RaiseEvent((New-Object System.Windows.RoutedEventArgs($eventInfo)))
     if ($null -eq $script:TempPlan) { throw 'Temp preview GUI event failed.' }
+    $controls.AIDoctorButton.RaiseEvent((New-Object System.Windows.RoutedEventArgs($eventInfo)))
     Write-Output 'Kermit read-only GUI event smoke tests passed.'
     return
 }

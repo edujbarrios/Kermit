@@ -36,6 +36,16 @@ jobs:
         shell: pwsh
         run: ./tests/Cleanup.Tests.ps1
 
+      - name: Test AI Doctor (read-only)
+        shell: pwsh
+        run: |
+          ./tests/AIDoctor.Tests.ps1
+          $report = (& ./AI-Doctor.ps1 -Json) | ConvertFrom-Json
+          if (-not $report.Report.ReadOnly -or $report.Report.SchemaVersion -ne 1) {
+            throw 'AI Doctor report schema or read-only status invalid.'
+          }
+          if ($report.Report.DeepCheck.Requested) { throw 'Deep CUDA probe must be opt-in.' }
+
       - name: Exercise cleanup read-only CLI
         shell: pwsh
         run: |
@@ -83,6 +93,9 @@ jobs:
         run: |
           .\tests\Smoke.Tests.ps1
           .\tests\Cleanup.Tests.ps1
+          .\tests\AIDoctor.Tests.ps1
+          $doctor = (& .\AI-Doctor.ps1 -Json) | ConvertFrom-Json
+          if (-not $doctor.Report.ReadOnly) { throw 'AI Doctor CLI failed in PowerShell 5.1.' }
           $scan = (& .\Kermit.ps1 -Action Scan -Json) | ConvertFrom-Json
           if ($scan.Action -ne 'Scan' -or $scan.Inventory.SchemaVersion -ne 1) {
             throw 'Windows PowerShell 5.1 scan failed.'
