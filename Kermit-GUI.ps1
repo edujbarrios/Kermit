@@ -103,6 +103,8 @@ $xaml = @'
                        FontWeight="SemiBold"/>
             <TextBlock Text="Preview every action. Temp deletion and app removal cannot be reliably undone."
                        Margin="0,8,0,16"/>
+            <Button x:Name="RefreshCleanupTabButton" Content="Refresh cleanup candidates"
+                    Width="220" HorizontalAlignment="Left" Background="#2563EB"/>
             <TextBlock Text="Old user temporary files" FontWeight="SemiBold"/>
             <WrapPanel Margin="0,8,0,2">
               <TextBlock Text="Minimum age (days)" VerticalAlignment="Center" Margin="0,0,12,0"/>
@@ -160,7 +162,7 @@ try { $window = [Windows.Markup.XamlReader]::Load($xmlReader) }
 finally { $xmlReader.Dispose(); $reader.Dispose() }
 
 $controls = @{}
-$names = @('ScanButton','RefreshCleanupButton','ProfileCombo','PreviewProfileButton',
+$names = @('ScanButton','RefreshCleanupButton','RefreshCleanupTabButton','ProfileCombo','PreviewProfileButton',
            'ApplyProfileButton','RestoreProfileButton','AgeCombo','PreviewTempButton',
            'ApplyTempButton','AppCombo','PreviewAppButton','ApplyAppButton',
            'ProcessCombo','PreviewProcessButton','ApplyProcessButton','OutputBox','StatusText')
@@ -239,6 +241,9 @@ $controls.ScanButton.Add_Click({
     } catch { Show-Error $_.Exception.Message }
 })
 $controls.RefreshCleanupButton.Add_Click({
+    try { Refresh-Candidates } catch { Show-Error $_.Exception.Message }
+})
+$controls.RefreshCleanupTabButton.Add_Click({
     try { Refresh-Candidates } catch { Show-Error $_.Exception.Message }
 })
 
