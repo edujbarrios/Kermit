@@ -8,7 +8,7 @@
   powershell.exe -NoProfile -STA -File .\Kermit-GUI.ps1 -ValidateXaml
 #>
 [CmdletBinding()]
-param([switch]$ValidateXaml)
+param([switch]$ValidateXaml, [switch]$SelfTest)
 
 $ErrorActionPreference = 'Stop'
 if ([Environment]::OSVersion.Platform -ne [PlatformID]::Win32NT) {
@@ -188,6 +188,7 @@ function Show-Result {
 }
 function Show-Error {
     param([string]$Message)
+    if ($SelfTest) { throw $Message }
     Show-Result -Value ("Error: {0}" -f $Message) -Status 'Operation not completed'
     [System.Windows.MessageBox]::Show($window, $Message, 'Kermit', 'OK', 'Error') | Out-Null
 }
@@ -287,7 +288,13 @@ $controls.RestoreProfileButton.Add_Click({
 $controls.PreviewTempButton.Add_Click({
     try {
         $script:TempPlan = Get-KermitCleanupPlan -Target Temp -MinimumAgeDays ([int]$controls.AgeCombo.SelectedItem)
-        Show-Result -Value $script:TempPlan -Status 'Temporary files preview only'
+        Show-Result -Value ([pscustomobject]@{
+            Target = $script:TempPlan.Target
+            CandidateCount = $script:TempPlan.CandidateCount
+            EstimatedMiB = $script:TempPlan.EstimatedMiB
+            MinimumAgeDays = $script:TempPlan.MinimumAgeDays
+            Warning = $script:TempPlan.Warning
+        }) -Status 'Temporary files preview only'
     } catch { $script:TempPlan = $null; Show-Error $_.Exception.Message }
 })
 $controls.ApplyTempButton.Add_Click({
@@ -351,4 +358,14 @@ $controls.ApplyProcessButton.Add_Click({
     } catch { $script:ProcessPlan = $null; Show-Error $_.Exception.Message }
 })
 
+if ($SelfTest) {
+    # Headless, read-only GUI event smoke tests. Do not click mutation buttons.
+    $eventInfo = [System.Windows.Controls.Primitives.ButtonBase]::ClickEvent
+    $controls.PreviewProfileButton.RaiseEvent((New-Object System.Windows.RoutedEventArgs($eventInfo)))
+    if ($null -eq $script:ProfilePlan) { throw 'Power profile preview GUI event failed.' }
+    $controls.PreviewTempButton.RaiseEvent((New-Object System.Windows.RoutedEventArgs($eventInfo)))
+    if ($null -eq $script:TempPlan) { throw 'Temp preview GUI event failed.' }
+    Write-Output 'Kermit read-only GUI event smoke tests passed.'
+    return
+}
 [void]$window.ShowDialog()
