@@ -43,3 +43,12 @@ jobs:
           if ($plan.Action -ne 'Plan' -or $plan.Plan.Profile -ne 'AI-Training') {
             throw 'Plan JSON schema check failed.'
           }
+
+      - name: Verify Windows PowerShell 5.1 compatibility
+        shell: powershell
+        run: |
+          .\tests\Smoke.Tests.ps1
+          $scan = (& .\Kermit.ps1 -Action Scan -Json) | ConvertFrom-Json
+          if ($scan.Action -ne 'Scan' -or $scan.Inventory.SchemaVersion -ne 1) {
+            throw 'Windows PowerShell 5.1 scan failed.'
+          }
