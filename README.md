@@ -17,6 +17,9 @@ cd Kermit
 # Desktop GUI (Windows PowerShell)
 powershell.exe -NoProfile -STA -File .\Kermit-GUI.ps1
 
+# AI diagnostics without modifying Windows
+.\AI-Doctor.ps1
+
 # CLI: inspect without changing anything
 .\Kermit.ps1 -Action Scan
 .\Kermit.ps1 -Action Plan -Profile AI-Training
@@ -26,9 +29,22 @@ powershell.exe -NoProfile -STA -File .\Kermit-GUI.ps1
 ## What it does
 
 - **Scan:** hardware, RAM, storage, startup apps, security status, NVIDIA GPUs, Python, WSL, and Docker.
+- **AI Doctor:** checks Python and installed AI package versions, NVIDIA GPUs, CUDA compiler, and WSL/Docker presence. Optional deeper PyTorch/CUDA runtime test.
 - **Profiles:** Balanced, AI Training, AI Inference, Gaming, and Development. Currently, applying a profile can change only an *existing* Windows power plan; snapshots allow restoring it.
 - **Cleanup:** preview optional Appx apps, selected background processes, and old user Temp files. Nothing is removed automatically.
 - **GUI + CLI:** all actions are local; diagnostic output is available as JSON from the CLI.
+
+## AI Doctor
+
+```powershell
+# Read-only diagnosis, with optional JSON export
+.\AI-Doctor.ps1 -Json -OutputPath .\ai-report.json
+
+# Opt-in deep check: imports PyTorch and tests torch.cuda.is_available()
+.\AI-Doctor.ps1 -DeepCheck
+```
+
+The CUDA version advertised by a driver **is not** the installed CUDA Toolkit; `nvcc` reports a compiler version if installed. Finding NVIDIA GPUs or PyTorch does **not** guarantee working GPU acceleration. AI Doctor checks only the Python interpreter found on PATH, not every virtual environment or WSL installation. No auto-installers or background downloads.
 
 ## Optional cleanup commands
 
@@ -58,8 +74,8 @@ Everything runs locally. JSON reports may contain device and application names; 
 
 ## Project
 
-- [CLI](Kermit.ps1) · [Cleanup](Cleanup.ps1) · [Desktop GUI](Kermit-GUI.ps1)
+- [CLI](Kermit.ps1) · [AI Doctor](AI-Doctor.ps1) · [Cleanup](Cleanup.ps1) · [Desktop GUI](Kermit-GUI.ps1)
 - [Tests](tests/) · [PowerShell CI](.github/workflows/powershell.yml)
-- Roadmap: CUDA/PyTorch compatibility checks, benchmarks, signed releases.
+- Roadmap: validated compatibility matrix, benchmarks, signed releases.
 
 **License:** Not yet selected. Do not assume redistribution rights until the maintainer adds one.
