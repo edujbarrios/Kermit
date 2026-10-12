@@ -49,15 +49,22 @@ try {
     Assert-Kermit (Test-Path -LiteralPath $newPath) 'Dry run must not delete new file'
     Assert-Kermit (Test-Path -LiteralPath $nestedPath) 'Dry run must not recurse'
 
+    # A new old file created after preview must NOT be included in that approval.
+    $latePath = Join-Path $fakeTemp 'late-old.tmp'
+    [IO.File]::WriteAllText($latePath, 'not previewed')
+    (Get-Item -LiteralPath $latePath).CreationTime = $oldTime
+    (Get-Item -LiteralPath $latePath).LastWriteTime = $oldTime
+
     $outcome = Invoke-KermitCleanup -Plan $plan
     Assert-Kermit ($outcome.DeletedFiles -eq 1) 'Opt-in cleanup should remove one eligible file'
     Assert-Kermit (-not (Test-Path -LiteralPath $oldPath)) 'Eligible file was not removed'
     Assert-Kermit (Test-Path -LiteralPath $newPath) 'Recent file must be retained'
     Assert-Kermit (Test-Path -LiteralPath $nestedPath) 'Nested files must be retained'
+    Assert-Kermit (Test-Path -LiteralPath $latePath) 'Files discovered after preview must be retained'
 
     $inventory = Get-KermitCleanupInventory
     Assert-Kermit ($inventory.SchemaVersion -eq 1) 'Inventory schema should be supported'
-    Assert-Kermit ($inventory.Temp.CandidateFiles -eq 0) 'No old top-level candidates should remain'
+    Assert-Kermit ($inventory.Temp.CandidateFiles -eq 1) 'Unpreviewed old file must remain eligible for a future plan'
 }
 finally {
     $env:LOCALAPPDATA = $oldLocalAppData
