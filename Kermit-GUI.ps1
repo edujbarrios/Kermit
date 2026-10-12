@@ -97,6 +97,24 @@ $xaml = @'
           </StackPanel>
         </ScrollViewer>
       </TabItem>
+      <TabItem Header="Benchmarks">
+        <ScrollViewer VerticalScrollBarVisibility="Auto">
+          <StackPanel Margin="20">
+            <TextBlock Text="Before / After" FontSize="20" FontWeight="SemiBold"/>
+            <TextBlock Text="Compare RAM, processes, disk and GPU readings under similar conditions. Snapshots are local JSON files."
+                       Margin="0,8,0,16"/>
+            <WrapPanel>
+              <Button x:Name="CaptureBeforeButton" Content="Capture BEFORE"/>
+              <Button x:Name="CaptureAfterButton" Content="Capture AFTER" Background="#2563EB"/>
+              <Button x:Name="CompareBenchmarksButton" Content="Compare reports" Background="#475569"/>
+            </WrapPanel>
+            <TextBlock Text="This does not benchmark AI training or inference throughput. Readings fluctuate with background activity."
+                       Foreground="#64748B" Margin="0,12,0,0"/>
+            <TextBlock Text="To compare reports from previous sessions, use Compare reports and select both JSON files."
+                       Foreground="#64748B" Margin="0,7,0,0"/>
+          </StackPanel>
+        </ScrollViewer>
+      </TabItem>
       <TabItem Header="Cleanup">
         <ScrollViewer VerticalScrollBarVisibility="Auto">
           <StackPanel Margin="20">
@@ -163,7 +181,7 @@ try { $window = [Windows.Markup.XamlReader]::Load($xmlReader) }
 finally { $xmlReader.Dispose(); $reader.Dispose() }
 
 $controls = @{}
-$names = @('ScanButton','AIDoctorButton','RefreshCleanupButton','RefreshCleanupTabButton','ProfileCombo','PreviewProfileButton',
+$names = @('ScanButton','AIDoctorButton','CaptureBeforeButton','CaptureAfterButton','CompareBenchmarksButton','RefreshCleanupButton','RefreshCleanupTabButton','ProfileCombo','PreviewProfileButton',
            'ApplyProfileButton','RestoreProfileButton','AgeCombo','PreviewTempButton',
            'ApplyTempButton','AppCombo','PreviewAppButton','ApplyAppButton',
            'ProcessCombo','PreviewProcessButton','ApplyProcessButton','OutputBox','StatusText')
@@ -176,11 +194,14 @@ if ($ValidateXaml) { Write-Output 'Kermit WPF XAML validated.'; return }
 Import-Module (Join-Path $PSScriptRoot 'src/Kermit.Core.psm1') -Force
 Import-Module (Join-Path $PSScriptRoot 'src/Kermit.Cleanup.psm1') -Force
 Import-Module (Join-Path $PSScriptRoot 'src/Kermit.AIDoctor.psm1') -Force
+Import-Module (Join-Path $PSScriptRoot 'src/Kermit.Benchmark.psm1') -Force
 
 $script:ProfilePlan = $null
 $script:TempPlan = $null
 $script:AppPlan = $null
 $script:ProcessPlan = $null
+$script:BeforeBenchmarkPath = $null
+$script:AfterBenchmarkPath = $null
 
 function Show-Result {
     param([object]$Value, [string]$Status = 'Ready')
@@ -247,6 +268,51 @@ $controls.AIDoctorButton.Add_Click({
     try {
         $report = Get-KermitAIReport
         Show-Result -Value $report -Status 'AI Doctor completed (read-only)'
+    } catch { Show-Error $_.Exception.Message }
+})
+$controls.CaptureBeforeButton.Add_Click({
+    try {
+        $snapshot = Get-KermitBenchmark -Label Before
+        $script:BeforeBenchmarkPath = Save-KermitBenchmark -Snapshot $snapshot
+        Show-Result -Value ([pscustomobject]@{
+            Path = $script:BeforeBenchmarkPath
+            Snapshot = $snapshot
+        }) -Status 'Before snapshot saved'
+    } catch { Show-Error $_.Exception.Message }
+})
+$controls.CaptureAfterButton.Add_Click({
+    try {
+        $snapshot = Get-KermitBenchmark -Label After
+        $script:AfterBenchmarkPath = Save-KermitBenchmark -Snapshot $snapshot
+        Show-Result -Value ([pscustomobject]@{
+            Path = $script:AfterBenchmarkPath
+            Snapshot = $snapshot
+        }) -Status 'After snapshot saved'
+    } catch { Show-Error $_.Exception.Message }
+})
+$controls.CompareBenchmarksButton.Add_Click({
+    try {
+        $beforePath = $script:BeforeBenchmarkPath
+        $afterPath = $script:AfterBenchmarkPath
+        $directory = Join-Path $env:LOCALAPPDATA 'Kermit\Benchmarks'
+        if (-not $beforePath) {
+            $picker = New-Object Microsoft.Win32.OpenFileDialog
+            $picker.Title = 'Choose a Kermit BEFORE snapshot'
+            $picker.Filter = 'JSON reports (*.json)|*.json'
+            if (Test-Path -LiteralPath $directory) { $picker.InitialDirectory = $directory }
+            if ($picker.ShowDialog($window) -ne $true) { return }
+            $beforePath = $picker.FileName
+        }
+        if (-not $afterPath) {
+            $picker = New-Object Microsoft.Win32.OpenFileDialog
+            $picker.Title = 'Choose a Kermit AFTER snapshot'
+            $picker.Filter = 'JSON reports (*.json)|*.json'
+            if (Test-Path -LiteralPath $directory) { $picker.InitialDirectory = $directory }
+            if ($picker.ShowDialog($window) -ne $true) { return }
+            $afterPath = $picker.FileName
+        }
+        $report = Compare-KermitBenchmarks -Before (Read-KermitBenchmark -Path $beforePath) -After (Read-KermitBenchmark -Path $afterPath)
+        Show-Result -Value $report -Status 'Benchmarks compared; no system changes'
     } catch { Show-Error $_.Exception.Message }
 })
 $controls.RefreshCleanupButton.Add_Click({
