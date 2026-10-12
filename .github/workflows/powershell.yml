@@ -69,6 +69,15 @@ jobs:
             throw 'WPF XAML validation failed.'
           }
 
+      - name: Smoke-test WPF read-only preview buttons
+        shell: powershell
+        timeout-minutes: 2
+        run: |
+          $result = & powershell.exe -NoProfile -STA -File .\\Kermit-GUI.ps1 -SelfTest
+          if ($LASTEXITCODE -ne 0 -or ($result -join ' ') -notmatch 'Kermit read-only GUI event smoke tests passed') {
+            throw 'WPF GUI read-only button tests failed.'
+          }
+
       - name: Verify Windows PowerShell 5.1 compatibility
         shell: powershell
         run: |
