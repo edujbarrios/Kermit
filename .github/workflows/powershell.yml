@@ -61,6 +61,14 @@ jobs:
             throw 'Plan JSON schema check failed.'
           }
 
+      - name: Validate WPF GUI without displaying windows
+        shell: powershell
+        run: |
+          $result = & powershell.exe -NoProfile -STA -File .\\Kermit-GUI.ps1 -ValidateXaml
+          if ($LASTEXITCODE -ne 0 -or ($result -join ' ') -notmatch 'Kermit WPF XAML validated') {
+            throw 'WPF XAML validation failed.'
+          }
+
       - name: Verify Windows PowerShell 5.1 compatibility
         shell: powershell
         run: |
