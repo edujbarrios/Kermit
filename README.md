@@ -11,6 +11,58 @@ Kermit is a publicly developed toolkit for understanding the state of your Windo
 > [!IMPORTANT]
 > **Early MVP / experimental software.** This project is not a security hardening certification, an antivirus, or a performance guarantee. Review the plan before applying it. Do not execute remote scripts blindly.
 
+## About Kermit
+
+**Windows performance and AI-readiness, without risky blanket debloating.** Kermit is a PowerShell workstation toolkit that inspects Windows, explains optional optimizations, and only changes settings after explicit approval. Suitable for developers, AI researchers, and power users who want an auditable local-first tool.
+
+Keywords: `powershell`, `windows`, `optimization`, `debloat`, `ai`, `gpu`, `workstation`.
+
+## Cleanup: optional apps, processes and temporary files
+
+The separate `Cleanup.ps1` script is **opt-in only** and intentionally conservative. Its inventory provides a shortlist rather than claiming every listed item is unnecessary.
+
+| Operation | Dry-run | Applied effect | Limitations |
+| --- | --- | --- | --- |
+| Temp | Counts top-level old files in user Temp | Deletes eligible regular files | Minimum age 7 days; no recursion; not reversible |
+| App | Checks a curated optional Appx package | Uninstalls that exact package for **current user only** | Settings may be lost, reinstall not guaranteed; no system provisioning changes |
+| Process | Checks an exact running PID, name and executable path | Requests a non-forced stop for one selected process | Unsaved work may be lost; process may restart |
+
+**Inventory:**
+
+```powershell
+.\Cleanup.ps1 -Action Inventory
+.\Cleanup.ps1 -Action Inventory -Json
+```
+
+**User TEMP:**
+
+```powershell
+.\Cleanup.ps1 -Action Plan -Target Temp -MinimumAgeDays 14
+# Only after inspecting the plan:
+.\Cleanup.ps1 -Action Apply -Target Temp -MinimumAgeDays 14 -Approve
+```
+
+**Optional built-in Appx app (only when present in the curated list):**
+
+```powershell
+.\Cleanup.ps1 -Action Plan -Target App -AppName Microsoft.BingWeather
+# Uninstalls the app for the current user, not automatically reversible:
+.\Cleanup.ps1 -Action Apply -Target App -AppName Microsoft.BingWeather -Approve
+```
+
+**One explicitly chosen background application process:**
+
+```powershell
+.\Cleanup.ps1 -Action Inventory
+.\Cleanup.ps1 -Action Plan -Target Process -ProcessId 1234 -ProcessName Discord
+# Only if you have saved your work and verified the PID:
+.\Cleanup.ps1 -Action Apply -Target Process -ProcessId 1234 -ProcessName Discord -Approve
+```
+
+Kermit **does not** uninstall arbitrary software, remove provisioned packages or Windows components, perform a recursive disk clean, bulk-stop tasks, disable services, modify Defender, or disable Windows Update. The initial process shortlist is in `Cleanup/catalog.json` and **inclusion is not a recommendation to stop that program**. Reopening apps or restarting Windows may restart their processes.
+
+**Important:** `-Approve` is explicit consent to the named action, not a promise of a backup. Deleting temp files and uninstalling apps do not have a guaranteed restore path. Back up important data and start with inventory/plan.
+
 ## What works today
 
 - **Read-only Windows audit**: OS/build, CPU, RAM, system drive, display adapters, startup entry count, security status, and power schemes.
@@ -19,6 +71,7 @@ Kermit is a publicly developed toolkit for understanding the state of your Windo
 - **Dry-run first**: `Plan` shows exactly what would change; `Scan` and `Plan` never change system settings.
 - **Explicit opt-in**: `Apply` requires `-Approve`. The MVP can **only switch to an already available Windows power scheme**, and only when one is different from the active scheme.
 - **Restore**: snapshots record the previous power scheme in `%LOCALAPPDATA%\Kermit\Snapshots`; you can restore it later with explicit approval.
+- **Optional cleanup script**: inventories candidate Appx applications, high-memory processes and aged user Temp files; explicit per-item actions with a preview (see above).
 - **JSON reports**: for automation, comparisons, and future desktop UI integrations.
 - **No silent debloat**: no default removal of apps, disabling startup items, registry "hacks", services, Defender, Windows Update, or VBS/Hyper-V.
 
@@ -94,8 +147,12 @@ Use `-Json` for structured output. Use `-OutputPath` to save the same JSON to a 
 ```text
 Kermit.ps1               # User-facing command line
 src/Kermit.Core.psm1      # Read-only audit, planning, apply and restore
+Cleanup.ps1               # Separate opt-in cleaning command
+src/Kermit.Cleanup.psm1   # Narrow temp / optional Appx / process operations
+Cleanup/catalog.json      # Curated optional apps and process allowlist
 Profiles/profiles.json    # Declarative presets, no executable snippets
 tests/Smoke.Tests.ps1     # Safe planner tests with synthetic inventory
+tests/Cleanup.Tests.ps1   # Isolated test TEMP; never removes real apps/processes
 .github/workflows/        # PowerShell syntax and read-only smoke CI
 ```
 
@@ -117,7 +174,9 @@ Snapshot files are stored in your Windows user profile, not in the Git repositor
 - [x] Read-only CLI tests and Windows CI workflow
 - [ ] GUI with grouped, explainable recommendations
 - [ ] Version/compatibility diagnostics for CUDA, PyTorch, WSL2, and installed Python environments
-- [ ] Startup and optional app-removal review with explicit allowlists, user confirmation, and restore strategy
+- [x] Read-only optional Appx/process inventory and curated, opt-in single-item actions
+- [x] User-scoped, top-level aged temp cleaning with dry-run and isolated tests
+- [ ] Restore-friendly uninstall workflow and optional startup-item management
 - [ ] Benchmark captures before and after changes (e.g., idle RAM and workload-specific inference speed)
 - [ ] Signed releases and reproducible packaging
 
