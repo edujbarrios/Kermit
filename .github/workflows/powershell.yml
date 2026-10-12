@@ -1,0 +1,45 @@
+name: PowerShell CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: windows-latest
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Parse PowerShell scripts
+        shell: pwsh
+        run: |
+          $files = Get-ChildItem -Path . -Recurse -File |
+            Where-Object { $_.Extension -in @('.ps1', '.psm1') }
+          foreach ($file in $files) {
+            $tokens = $null
+            $errors = $null
+            [System.Management.Automation.Language.Parser]::ParseFile(
+              $file.FullName, [ref]$tokens, [ref]$errors
+            ) | Out-Null
+            if ($errors.Count -gt 0) {
+              $errors | ForEach-Object { Write-Error "$($file.FullName): $_" }
+              throw "Parse errors in $($file.FullName)"
+            }
+          }
+
+      - name: Run pure smoke tests
+        shell: pwsh
+        run: ./tests/Smoke.Tests.ps1
+
+      - name: Exercise read-only CLI
+        shell: pwsh
+        run: |
+          $scan = (& ./Kermit.ps1 -Action Scan -Json) | ConvertFrom-Json
+          if ($scan.Action -ne 'Scan' -or $scan.Inventory.SchemaVersion -ne 1) {
+            throw 'Scan JSON schema check failed.'
+          }
+          $plan = (& ./Kermit.ps1 -Action Plan -Profile AI-Training -Json) | ConvertFrom-Json
+          if ($plan.Action -ne 'Plan' -or $plan.Plan.Profile -ne 'AI-Training') {
+            throw 'Plan JSON schema check failed.'
+          }
