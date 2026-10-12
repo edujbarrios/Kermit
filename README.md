@@ -6,7 +6,7 @@
 >
 > Built with PowerShell. Ready for AI. Made for Windows.
 
-Kermit is an open-source toolkit for understanding the state of your Windows PC and applying *small, explainable, reversible* changes. The objective is less unnecessary background work, easier AI environment setup, and measurable results — **not** "magical" GPU or VRAM gains.
+Kermit is a publicly developed toolkit for understanding the state of your Windows PC and applying *small, explainable, reversible* changes. The objective is less unnecessary background work, easier AI environment setup, and measurable results — **not** "magical" GPU or VRAM gains.
 
 > [!IMPORTANT]
 > **Early MVP / experimental software.** This project is not a security hardening certification, an antivirus, or a performance guarantee. Review the plan before applying it. Do not execute remote scripts blindly.
@@ -125,4 +125,4 @@ Snapshot files are stored in your Windows user profile, not in the Git repositor
 
 Bug reports and small PRs are welcome. For a new optimization, include: supported Windows versions, why it helps, evidence/measurements, possible side effects, an explicit opt-in mechanism, and a verified rollback path. **Do not submit blanket Defender/Update disabling or hidden destructive tweaks.**
 
-*Project naming and licensing are pending maintainer decisions. Until a license is added, do not assume permissions to redistribute derivative versions.*
+*A license has not yet been selected by the maintainer. Until a license is added, do not assume permission to redistribute derivative versions.*
