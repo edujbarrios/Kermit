@@ -1,0 +1,30 @@
+{
+  "schemaVersion": 1,
+  "profiles": [
+    {
+      "id": "Balanced",
+      "description": "Restore or use the Windows Balanced power scheme when available. Recommended as a safe everyday default.",
+      "powerSchemeGuid": "381b4222-f694-41f0-9685-ff5bb260df2e"
+    },
+    {
+      "id": "AI-Training",
+      "description": "Prioritize sustained plugged-in ML training; includes environment advice without auto-installing software.",
+      "powerSchemeGuid": "8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c"
+    },
+    {
+      "id": "AI-Inference",
+      "description": "Prepare for local model inference while checking Python, NVIDIA, and WSL tooling.",
+      "powerSchemeGuid": "8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c"
+    },
+    {
+      "id": "Gaming",
+      "description": "Optional high-performance Windows power mode; no service disabling or speculative registry tweaks.",
+      "powerSchemeGuid": "8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c"
+    },
+    {
+      "id": "Development",
+      "description": "Developer workstation with Windows Balanced power mode. Container and tooling checks are read-only.",
+      "powerSchemeGuid": "381b4222-f694-41f0-9685-ff5bb260df2e"
+    }
+  ]
+}

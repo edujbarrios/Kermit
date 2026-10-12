@@ -1,0 +1,35 @@
+{
+  "SchemaVersion": 1,
+  "OptionalApps": [
+    {
+      "Name": "Microsoft.BingWeather",
+      "Description": "Weather app; optional if you do not use Windows weather"
+    },
+    {
+      "Name": "Microsoft.MicrosoftSolitaireCollection",
+      "Description": "Microsoft Solitaire Collection; optional casual game"
+    },
+    {
+      "Name": "Microsoft.WindowsFeedbackHub",
+      "Description": "Windows Feedback Hub; optional feedback utility"
+    },
+    {
+      "Name": "Microsoft.GetHelp",
+      "Description": "Get Help support app; keep if you use Microsoft support"
+    },
+    {
+      "Name": "Microsoft.Getstarted",
+      "Description": "Windows Tips / Get Started; optional onboarding"
+    }
+  ],
+  "StoppableProcesses": [
+    "Discord",
+    "Spotify",
+    "Steam",
+    "EpicGamesLauncher",
+    "chrome",
+    "firefox",
+    "msedge",
+    "Teams"
+  ]
+}
